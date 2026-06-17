@@ -251,3 +251,28 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(PORT, () => console.log(`🎵 Vinyl running on :${PORT}`));
+
+app.get('/api/debug/:username', async (req, res) => {
+  try {
+    const url = `https://music.apple.com/profile/${req.params.username}`;
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
+    });
+    const html = await r.text();
+    res.json({
+      status: r.status,
+      length: html.length,
+      hasNextData: html.includes('__NEXT_DATA__'),
+      hasPl: html.includes('pl.'),
+      hasPlaylist: html.includes('playlist'),
+      tokenFound: cachedToken ? 'yes' : 'no',
+      preview: html.substring(0, 1000),
+    });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
