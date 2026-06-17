@@ -17,147 +17,94 @@ if (process.env.NODE_ENV === 'production') {
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-let cachedToken = null;
-let tokenExpiry = 0;
+// ─── Brian's hardcoded playlist library ───────────────────────────────────
+const BRIAN_PLAYLISTS = [
+  { id: 'pl.u-pMylGkbUYrkpo1', name: '2026 Cuban Musica', url: 'https://music.apple.com/us/playlist/2026-cuban-musica/pl.u-pMylGkbUYrkpo1', tracks: [] },
+  { id: 'pl.u-EdAVYJqsX7egJ8', name: '2026 Jen Spreadsheet', url: 'https://music.apple.com/us/playlist/2026-jen-spreadsheet/pl.u-EdAVYJqsX7egJ8', tracks: [] },
+  { id: 'pl.u-r2yBYz2F9Y075v', name: '2026 From One Extreme to the Other', url: 'https://music.apple.com/us/playlist/2026-from-one-extreme-to-the-other/pl.u-r2yBYz2F9Y075v', tracks: [] },
+  { id: 'pl.u-pMylE6aTYrkpo1', name: 'Mellow 9', url: 'https://music.apple.com/us/playlist/mellow-9/pl.u-pMylE6aTYrkpo1', tracks: [] },
+  { id: 'pl.u-r2yBYqXT9Y075v', name: 'Chill 2026', url: 'https://music.apple.com/us/playlist/chill-2026/pl.u-r2yBYqXT9Y075v', tracks: [] },
+  { id: 'pl.u-pMylEbEcYrkpo1', name: '2026 St. Barts', url: 'https://music.apple.com/us/playlist/2026-st-barts/pl.u-pMylEbEcYrkpo1', tracks: [] },
+  { id: 'pl.u-pMylEbRtYrkpo1', name: '2025 High Energy', url: 'https://music.apple.com/us/playlist/2025-high-energy/pl.u-pMylEbRtYrkpo1', tracks: [] },
+  { id: 'pl.u-EdAVRobsX7egJ8', name: '2019 Cayman Islands', url: 'https://music.apple.com/us/playlist/2019-cayman-islands/pl.u-EdAVRobsX7egJ8', tracks: [] },
+  { id: 'pl.u-qxylD8lCXVx6rv', name: 'Chill 2025', url: 'https://music.apple.com/us/playlist/chill-2025/pl.u-qxylD8lCXVx6rv', tracks: [] },
+  { id: 'pl.u-55D67KyUYk2JMd', name: '2025 Ned', url: 'https://music.apple.com/us/playlist/2025-ned/pl.u-55D67KyUYk2JMd', tracks: [] },
+  { id: 'pl.u-4JomGlbFM31Vzx', name: '2024 Croatia', url: 'https://music.apple.com/us/playlist/2024-croatia/pl.u-4JomGlbFM31Vzx', tracks: [] },
+  { id: 'pl.u-pMylAdEsYrkpo1', name: 'Party 9-13-18', url: 'https://music.apple.com/us/playlist/party-9-13-18/pl.u-pMylAdEsYrkpo1', tracks: [] },
+  { id: 'pl.u-EdAVxjruX7egJ8', name: '2026 Japan', url: 'https://music.apple.com/us/playlist/2026-japan/pl.u-EdAVxjruX7egJ8', tracks: [] },
+  { id: 'pl.u-r2yBZjGT9Y075v', name: 'Radiohead: A Moon Shaped Pool', url: 'https://music.apple.com/us/playlist/radiohead-a-moon-shaped-pool/pl.u-r2yBZjGT9Y075v', tracks: [] },
+  { id: 'pl.u-06oxNXxTXE5MpR', name: '2026 Soul', url: 'https://music.apple.com/us/playlist/2026-soul/pl.u-06oxNXxTXE5MpR', tracks: [] },
+  { id: 'pl.u-MDAWq1Ju40gz9p', name: 'Naomi Shelton & The Gospel Queens', url: 'https://music.apple.com/us/playlist/naomi-shelton-the-gospel-queens-daptone-records/pl.u-MDAWq1Ju40gz9p', tracks: [] },
+  { id: 'pl.u-EdAVY3VIX7egJ8', name: '2025 Sirens & Helicopters', url: 'https://music.apple.com/us/playlist/2025-sirens-helicopters/pl.u-EdAVY3VIX7egJ8', tracks: [] },
+  { id: 'pl.u-r2yBY8kF9Y075v', name: 'Shazam Songs', url: 'https://music.apple.com/us/playlist/shazam-songs/pl.u-r2yBY8kF9Y075v', tracks: [] },
+  { id: 'pl.u-pMylE8jUYrkpo1', name: '2025 No Summer Plans', url: 'https://music.apple.com/us/playlist/2025-no-summer-plans/pl.u-pMylE8jUYrkpo1', tracks: [] },
+  { id: 'pl.u-55D670KiYk2JMd', name: 'Shazam Songs (2)', url: 'https://music.apple.com/us/playlist/shazam-songs/pl.u-55D670KiYk2JMd', tracks: [] },
+  { id: 'pl.u-4JomG0GuM31Vzx', name: 'Shazam Songs (3)', url: 'https://music.apple.com/us/playlist/shazam-songs/pl.u-4JomG0GuM31Vzx', tracks: [] },
+  { id: 'pl.u-4JomGrJIM31Vzx', name: 'Chill 2024', url: 'https://music.apple.com/us/playlist/chill-2024/pl.u-4JomGrJIM31Vzx', tracks: [] },
+  { id: 'pl.u-qxylDAYsXVx6rv', name: '2024 Lartusi', url: 'https://music.apple.com/us/playlist/2024-lartusi/pl.u-qxylDAYsXVx6rv', tracks: [] },
+  { id: 'pl.u-yZyVlDLCzkml2y', name: 'Chill Ondabeach', url: 'https://music.apple.com/us/playlist/chill-ondabeach/pl.u-yZyVlDLCzkml2y', tracks: [] },
+  { id: 'pl.u-XkD0Z3Bi48Lrkv', name: 'Chill Lindsay', url: 'https://music.apple.com/us/playlist/chill-lindsay/pl.u-XkD0Z3Bi48Lrkv', tracks: [] },
+  { id: 'pl.u-MDAWmLWT40gz9p', name: '2024 Nicaragua Here I Come', url: 'https://music.apple.com/us/playlist/2024-nicaragua-here-i-come/pl.u-MDAWmLWT40gz9p', tracks: [] },
+  { id: 'pl.u-EdAV7XGuX7egJ8', name: '2023 Searching For...', url: 'https://music.apple.com/us/playlist/2023-searching-for/pl.u-EdAV7XGuX7egJ8', tracks: [] },
+  { id: 'pl.u-EdAV7XYIX7egJ8', name: 'Chill Techno', url: 'https://music.apple.com/us/playlist/chill-techno/pl.u-EdAV7XYIX7egJ8', tracks: [] },
+  { id: 'pl.u-MDAWm79F40gz9p', name: 'Chill Best Of', url: 'https://music.apple.com/us/playlist/chill-best-of/pl.u-MDAWm79F40gz9p', tracks: [] },
+  { id: 'pl.u-EdAV7mWsX7egJ8', name: '2023 Berkshires or Bust', url: 'https://music.apple.com/us/playlist/2023-berkshires-or-bust/pl.u-EdAV7mWsX7egJ8', tracks: [] },
+  { id: 'pl.u-r2yBLgqF9Y075v', name: '2023 Yikes', url: 'https://music.apple.com/us/playlist/2023-yikes/pl.u-r2yBLgqF9Y075v', tracks: [] },
+  { id: 'pl.u-pMylNPvtYrkpo1', name: 'Chill 2023', url: 'https://music.apple.com/us/playlist/chill-2023/pl.u-pMylNPvtYrkpo1', tracks: [] },
+  { id: 'pl.u-55D6xRlcYk2JMd', name: '2022 Safari Adventure', url: 'https://music.apple.com/us/playlist/2022-safari-adventure/pl.u-55D6xRlcYk2JMd', tracks: [] },
+  { id: 'pl.u-EdAV7bdIX7egJ8', name: '2022 Marrakech', url: 'https://music.apple.com/us/playlist/2022-marrakech/pl.u-EdAV7bdIX7egJ8', tracks: [] },
+  { id: 'pl.u-pMylNyLiYrkpo1', name: 'Mellow 8', url: 'https://music.apple.com/us/playlist/mellow-8/pl.u-pMylNyLiYrkpo1', tracks: [] },
+  { id: 'pl.u-55D6xD3iYk2JMd', name: '2022 Omicron', url: 'https://music.apple.com/us/playlist/2022-omicrom/pl.u-55D6xD3iYk2JMd', tracks: [] },
+  { id: 'pl.u-55D6xpVsYk2JMd', name: 'Chill 2022', url: 'https://music.apple.com/us/playlist/chill-2022/pl.u-55D6xpVsYk2JMd', tracks: [] },
+  { id: 'pl.u-4JomrZ9CM31Vzx', name: '2021 Bahamas', url: 'https://music.apple.com/us/playlist/2021-bahamas/pl.u-4JomrZ9CM31Vzx', tracks: [] },
+  { id: 'pl.u-4JomrmmtM31Vzx', name: 'High School Playlist', url: 'https://music.apple.com/us/playlist/high-school-playlist/pl.u-4JomrmmtM31Vzx', tracks: [] },
+];
 
-async function getAMToken() {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
-  try {
-    const res = await fetch('https://music.apple.com/us/browse', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
-    });
-    const html = await res.text();
-    const tokenMatch = html.match(/eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6[A-Za-z0-9_\-\.]+/);
-    if (tokenMatch) {
-      cachedToken = tokenMatch[0];
-      tokenExpiry = Date.now() + 3600000;
-      console.log('Got AM token');
-      return cachedToken;
-    }
-  } catch (e) { console.error('Token error:', e.message); }
-  return null;
-}
-
-function walkForPlaylists(obj, playlists, seen, depth) {
-  if (depth > 15 || !obj || typeof obj !== 'object') return;
-  if (Array.isArray(obj)) { obj.forEach(v => walkForPlaylists(v, playlists, seen, depth + 1)); return; }
-  if (obj.type === 'playlists' && obj.id?.startsWith('pl.') && obj.attributes?.name && !seen.has(obj.id)) {
-    seen.add(obj.id);
-    const a = obj.attributes;
-    playlists.push({ id: obj.id, name: a.name, url: a.url || `https://music.apple.com/us/playlist/${obj.id}`, trackCount: a.trackCount, tracks: [] });
-    return;
-  }
-  Object.values(obj).forEach(v => walkForPlaylists(v, playlists, seen, depth + 1));
-}
-
-async function fetchUserProfile(username) {
-  const token = await getAMToken();
-  const playlists = [];
-  const seen = new Set();
-
-  // Try amp-api social endpoint first
-  if (token) {
-    try {
-      const apiRes = await fetch(
-        `https://amp-api.music.apple.com/v1/social/profiles/${username}/playlists?limit=100&l=en-US&platform=web`,
-        { headers: { 'Authorization': `Bearer ${token}`, 'Origin': 'https://music.apple.com', 'Referer': 'https://music.apple.com/' } }
-      );
-      if (apiRes.ok) {
-        const data = await apiRes.json();
-        (data.data || []).forEach(pl => {
-          if (!seen.has(pl.id)) {
-            seen.add(pl.id);
-            playlists.push({ id: pl.id, name: pl.attributes?.name || 'Playlist', url: pl.attributes?.url || `https://music.apple.com/us/playlist/${pl.id}`, trackCount: pl.attributes?.trackCount, tracks: [] });
-          }
-        });
-        console.log(`amp-api found ${playlists.length} playlists`);
-      }
-    } catch (e) { console.error('amp-api error:', e.message); }
-  }
-
-  // Scrape profile page as fallback
-  const res = await fetch(`https://music.apple.com/profile/${username}`, {
+// ─── Fetch tracks from a public playlist page ─────────────────────────────
+async function fetchPlaylistTracks(playlist) {
+  const res = await fetch(playlist.url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     }
   });
-  if (!res.ok) throw new Error(`Profile not found (${res.status})`);
-  const html = await res.text();
-  const $ = cheerio.load(html);
 
-  const displayName =
-    $('meta[property="og:title"]').attr('content')?.replace(' - Apple Music', '').trim() ||
-    $('title').text().replace(' - Apple Music', '').trim() ||
-    username;
-
-  // __NEXT_DATA__
-  const raw = $('#__NEXT_DATA__').text();
-  if (raw) {
-    try { walkForPlaylists(JSON.parse(raw), playlists, seen, 0); } catch {}
+  if (!res.ok) {
+    console.error(`Failed to fetch ${playlist.name}: ${res.status}`);
+    return [];
   }
 
-  // href scan
-  $('a[href*="/playlist/"]').each((_, el) => {
-    const href = $(el).attr('href') || '';
-    const match = href.match(/\/playlist\/[^/]+\/(pl\.[a-zA-Z0-9]+)/);
-    if (!match) return;
-    const id = match[1];
-    if (seen.has(id)) return;
-    seen.add(id);
-    const name = $(el).attr('aria-label') || $(el).text().replace(/\s+/g, ' ').trim();
-    if (!name) return;
-    playlists.push({ id, name, url: href.startsWith('http') ? href : `https://music.apple.com${href}`, tracks: [] });
-  });
-
-  return { displayName, playlists };
-}
-
-async function fetchPlaylistTracks(playlistUrl, playlistId) {
-  const token = await getAMToken();
-
-  if (token && playlistId) {
-    try {
-      const apiRes = await fetch(
-        `https://amp-api.music.apple.com/v1/catalog/us/playlists/${playlistId}?include=tracks&limit=100&l=en-US`,
-        { headers: { 'Authorization': `Bearer ${token}`, 'Origin': 'https://music.apple.com', 'Referer': 'https://music.apple.com/' } }
-      );
-      if (apiRes.ok) {
-        const data = await apiRes.json();
-        const trackData = data.data?.[0]?.relationships?.tracks?.data || [];
-        if (trackData.length > 0) {
-          return trackData.map(t => ({ title: t.attributes?.name || '', artist: t.attributes?.artistName || '', album: t.attributes?.albumName || '' }));
-        }
-      }
-    } catch (e) { console.error('Track API error:', e.message); }
-  }
-
-  const res = await fetch(playlistUrl, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'Accept': 'text/html' }
-  });
-  if (!res.ok) return [];
   const html = await res.text();
   const $ = cheerio.load(html);
   const tracks = [];
   const seen = new Set();
 
+  // Strategy 1: JSON-LD schema.org (most reliable for playlist pages)
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const data = JSON.parse($(el).text());
-      const list = data['@type'] === 'MusicPlaylist' ? data : (Array.isArray(data) ? data.find(d => d['@type'] === 'MusicPlaylist') : null);
+      const list = data['@type'] === 'MusicPlaylist' ? data :
+        (Array.isArray(data) ? data.find(d => d['@type'] === 'MusicPlaylist') : null);
       if (list?.track) {
         list.track.forEach(t => {
           if (!t.name) return;
           const key = `${t.name}::${t.byArtist?.name || ''}`.toLowerCase();
-          if (!seen.has(key)) { seen.add(key); tracks.push({ title: t.name, artist: t.byArtist?.name || '' }); }
+          if (!seen.has(key)) {
+            seen.add(key);
+            tracks.push({ title: t.name, artist: t.byArtist?.name || '' });
+          }
         });
       }
     } catch {}
   });
 
-  if (tracks.length > 0) return tracks;
+  if (tracks.length > 0) {
+    console.log(`✓ ${playlist.name}: ${tracks.length} tracks via JSON-LD`);
+    return tracks;
+  }
 
+  // Strategy 2: __NEXT_DATA__ songs
   const raw = $('#__NEXT_DATA__').text();
   if (raw) {
     try {
@@ -167,7 +114,10 @@ async function fetchPlaylistTracks(playlistUrl, playlistId) {
         if (Array.isArray(obj)) { obj.forEach(v => walk(v, depth + 1)); return; }
         if (obj.type === 'songs' && obj.attributes?.name) {
           const key = `${obj.attributes.name}::${obj.attributes.artistName || ''}`.toLowerCase();
-          if (!seen.has(key)) { seen.add(key); tracks.push({ title: obj.attributes.name, artist: obj.attributes.artistName || '' }); }
+          if (!seen.has(key)) {
+            seen.add(key);
+            tracks.push({ title: obj.attributes.name, artist: obj.attributes.artistName || '' });
+          }
           return;
         }
         Object.values(obj).forEach(v => walk(v, depth + 1));
@@ -176,33 +126,43 @@ async function fetchPlaylistTracks(playlistUrl, playlistId) {
     } catch {}
   }
 
-  return tracks.slice(0, 100);
+  if (tracks.length > 0) {
+    console.log(`✓ ${playlist.name}: ${tracks.length} tracks via __NEXT_DATA__`);
+    return tracks;
+  }
+
+  console.warn(`✗ ${playlist.name}: 0 tracks found`);
+  return [];
 }
 
-app.get('/api/profile/:username', async (req, res) => {
-  try {
-    console.log('Fetching profile:', req.params.username);
-    const result = await fetchUserProfile(req.params.username);
-    console.log(`Found ${result.playlists.length} playlists for ${result.displayName}`);
-    res.json(result);
-  } catch (err) {
-    console.error('Profile error:', err.message);
-    res.status(400).json({ error: err.message });
-  }
+// ─── Routes ───────────────────────────────────────────────────────────────
+
+// Return Brian's hardcoded playlist list (no scraping needed)
+app.get('/api/profile/brian_meyer', async (req, res) => {
+  res.json({
+    displayName: 'Brian Meyer',
+    playlists: BRIAN_PLAYLISTS,
+  });
 });
 
+// Fetch tracks for a specific playlist by ID
 app.get('/api/playlist-tracks', async (req, res) => {
-  const { url, id } = req.query;
-  if (!url) return res.status(400).json({ error: 'Missing url' });
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+
+  const playlist = BRIAN_PLAYLISTS.find(p => p.id === id);
+  if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+
   try {
-    const tracks = await fetchPlaylistTracks(url, id);
-    console.log(`Found ${tracks.length} tracks`);
+    const tracks = await fetchPlaylistTracks(playlist);
     res.json({ tracks });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Track fetch error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
+// AI recommendation
 app.post('/api/recommend', async (req, res) => {
   const { playlists, targetPlaylist } = req.body;
   if (!playlists || !targetPlaylist) return res.status(400).json({ error: 'Missing data' });
@@ -213,63 +173,57 @@ app.post('/api/recommend', async (req, res) => {
     allOwned.add(`${t.title} ${t.artist}`.toLowerCase());
   }));
 
-  const tasteProfile = playlists.map(pl => {
-    const sample = (pl.tracks || []).slice(0, 20).map(t => `"${t.title}" by ${t.artist}`).join(', ');
-    return `• "${pl.name}": ${sample || '(no tracks loaded)'}`;
-  }).join('\n');
+  const tasteProfile = playlists
+    .filter(pl => pl.tracks?.length > 0)
+    .map(pl => {
+      const sample = pl.tracks.slice(0, 15).map(t => `"${t.title}" by ${t.artist}`).join(', ');
+      return `• "${pl.name}": ${sample}`;
+    }).join('\n');
 
-  const targetSongs = (targetPlaylist.tracks || []).slice(0, 30).map(t => `"${t.title}" by ${t.artist}`).join(', ');
+  const targetSongs = (targetPlaylist.tracks || []).slice(0, 30)
+    .map(t => `"${t.title}" by ${t.artist}`).join(', ');
 
-  const prompt = `You are a world-class music curator. Analyze this person's Apple Music library and recommend ONE perfect new song for their chosen playlist.
+  const prompt = `You are a world-class music curator. Analyze Brian Meyer's Apple Music library and recommend ONE perfect new song for his chosen playlist.
 
-FULL LIBRARY:
-${tasteProfile}
+BRIAN'S FULL LIBRARY:
+${tasteProfile || '(loading...)'}
 
 TARGET PLAYLIST: "${targetPlaylist.name}"
-Current songs: ${targetSongs || '(none)'}
+Current songs: ${targetSongs || '(none loaded yet)'}
 
-Rules: Do NOT recommend anything already in their library. Match the vibe of the target playlist. Be specific and adventurous.
+Rules:
+- Do NOT recommend any song already in his library
+- Match the specific vibe/genre of the target playlist
+- Be adventurous and specific — not the most obvious hit
+- The playlist name and year are strong clues about theme/mood
 
 Respond ONLY with this JSON (no markdown):
-{"title":"Song Title","artist":"Artist Name","album":"Album Name","year":2019,"why":"1-2 sentences why this fits","vibe":"3-4 word mood","genres":["genre1","genre2"]}`;
+{"title":"Song Title","artist":"Artist Name","album":"Album Name","year":2019,"why":"1-2 sentences why this fits perfectly","vibe":"3-4 word mood","genres":["genre1","genre2"]}`;
 
   try {
-    const msg = await anthropic.messages.create({ model: 'claude-opus-4-6', max_tokens: 512, messages: [{ role: 'user', content: prompt }] });
+    const msg = await anthropic.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: prompt }],
+    });
     const raw = msg.content[0].text.trim();
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON');
+    if (!match) throw new Error('No JSON in response');
     const rec = JSON.parse(match[0]);
-    rec.alreadyOwned = allOwned.has(rec.title?.toLowerCase()) || allOwned.has(`${rec.title} ${rec.artist}`.toLowerCase());
+    rec.alreadyOwned = allOwned.has(rec.title?.toLowerCase()) ||
+      allOwned.has(`${rec.title} ${rec.artist}`.toLowerCase());
     res.json({ recommendation: rec });
   } catch (err) {
+    console.error('Recommend error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-app.get('/api/debug/:username', async (req, res) => {
-  try {
-    const url = `https://music.apple.com/profile/${req.params.username}`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }
-    });
-    const html = await r.text();
-    res.json({
-      status: r.status,
-      length: html.length,
-      hasNextData: html.includes('__NEXT_DATA__'),
-      hasPl: html.includes('pl.'),
-      hasPlaylist: html.includes('playlist'),
-      tokenFound: cachedToken ? 'yes' : 'no',
-      preview: html.substring(0, 1000),
-    });
-  } catch (e) {
-    res.json({ error: e.message });
-  }
+// Debug: test fetching a single playlist
+app.get('/api/debug/:id', async (req, res) => {
+  const playlist = BRIAN_PLAYLISTS.find(p => p.id === req.params.id) || BRIAN_PLAYLISTS[0];
+  const tracks = await fetchPlaylistTracks(playlist);
+  res.json({ playlist: playlist.name, trackCount: tracks.length, sample: tracks.slice(0, 5) });
 });
 
 if (process.env.NODE_ENV === 'production') {
