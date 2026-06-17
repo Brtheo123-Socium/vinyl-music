@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: vinyl-music
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: |
+      cd client && npm install && npm run build
+      cd ../server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
