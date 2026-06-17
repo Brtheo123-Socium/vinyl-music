@@ -246,11 +246,6 @@ Respond ONLY with this JSON (no markdown):
   }
 });
 
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../client/build/index.html')));
-}
-
-app.listen(PORT, () => console.log(`🎵 Vinyl running on :${PORT}`));
 
 app.get('/api/debug/:username', async (req, res) => {
   try {
@@ -276,3 +271,9 @@ app.get('/api/debug/:username', async (req, res) => {
     res.json({ error: e.message });
   }
 });
+
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../client/build/index.html')));
+}
+
+app.listen(PORT, () => console.log(`🎵 Vinyl running on :${PORT}`));
