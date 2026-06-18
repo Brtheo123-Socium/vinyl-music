@@ -173,37 +173,31 @@ app.post('/api/recommend', async (req, res) => {
     allOwned.add(`${t.title} ${t.artist}`.toLowerCase());
   }));
 
-  const tasteProfile = playlists
-    .filter(pl => pl.tracks?.length > 0)
-    .map(pl => {
-      const sample = pl.tracks.slice(0, 15).map(t => `"${t.title}" by ${t.artist}`).join(', ');
-      return `• "${pl.name}": ${sample}`;
-    }).join('\n');
+  const targetSongs = (targetPlaylist.tracks || []).slice(0, 20)
+    .map(t => t.title + ' by ' + t.artist).join(', ');
 
-  const targetSongs = (targetPlaylist.tracks || []).slice(0, 30)
-    .map(t => `"${t.title}" by ${t.artist}`).join(', ');
+  const otherContext = playlists
+    .filter(pl => pl.id !== targetPlaylist.id && pl.tracks && pl.tracks.length > 0)
+    .slice(0, 5)
+    .map(pl => pl.name + ': ' + pl.tracks.slice(0, 6).map(t => t.title + ' - ' + t.artist).join(', '))
+    .join('
+');
 
-  const prompt = `You are a world-class music curator. Analyze Brian Meyer's Apple Music library and recommend ONE perfect new song for his chosen playlist.
+  const prompt = 'Recommend ONE new song for this playlist. JSON only, no markdown.
 
-BRIAN'S FULL LIBRARY:
-${tasteProfile || '(loading...)'}
+PLAYLIST: "' + targetPlaylist.name + '"
+SONGS IN IT: ' + (targetSongs || '(none)') + '
+OTHER PLAYLISTS FOR TASTE:
+' + (otherContext || '(none)') + '
 
-TARGET PLAYLIST: "${targetPlaylist.name}"
-Current songs: ${targetSongs || '(none loaded yet)'}
+Do not recommend anything already listed. Match the vibe closely.
 
-Rules:
-- Do NOT recommend any song already in his library
-- Match the specific vibe/genre of the target playlist
-- Be adventurous and specific — not the most obvious hit
-- The playlist name and year are strong clues about theme/mood
-
-Respond ONLY with this JSON (no markdown):
-{"title":"Song Title","artist":"Artist Name","album":"Album Name","year":2019,"why":"1-2 sentences why this fits perfectly","vibe":"3-4 word mood","genres":["genre1","genre2"]}`;
+{"title":"","artist":"","album":"","year":2020,"why":"1 sentence","vibe":"3 words","genres":[]}';
 
   try {
     const msg = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 512,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     });
     const raw = msg.content[0].text.trim();
