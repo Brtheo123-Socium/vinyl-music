@@ -174,25 +174,24 @@ app.post('/api/recommend', async (req, res) => {
   }));
 
   const targetSongs = (targetPlaylist.tracks || []).slice(0, 20)
-    .map(t => t.title + ' by ' + t.artist).join(', ');
+    .map(t => `${t.title} by ${t.artist}`).join(', ');
 
   const otherContext = playlists
     .filter(pl => pl.id !== targetPlaylist.id && pl.tracks && pl.tracks.length > 0)
     .slice(0, 5)
-    .map(pl => pl.name + ': ' + pl.tracks.slice(0, 6).map(t => t.title + ' - ' + t.artist).join(', '))
-    .join('
-');
+    .map(pl => `${pl.name}: ${pl.tracks.slice(0, 6).map(t => `${t.title} - ${t.artist}`).join(', ')}`)
+    .join('\n');
 
-  const prompt = 'Recommend ONE new song for this playlist. JSON only, no markdown.
+  const prompt = `Recommend ONE new song for this playlist. JSON only, no markdown.
 
-PLAYLIST: "' + targetPlaylist.name + '"
-SONGS IN IT: ' + (targetSongs || '(none)') + '
+PLAYLIST: "${targetPlaylist.name}"
+SONGS IN IT: ${targetSongs || '(none)'}
 OTHER PLAYLISTS FOR TASTE:
-' + (otherContext || '(none)') + '
+${otherContext || '(none)'}
 
 Do not recommend anything already listed. Match the vibe closely.
 
-{"title":"","artist":"","album":"","year":2020,"why":"1 sentence","vibe":"3 words","genres":[]}';
+{"title":"","artist":"","album":"","year":2020,"why":"1 sentence","vibe":"3 words","genres":[]}`;
 
   try {
     const msg = await anthropic.messages.create({
