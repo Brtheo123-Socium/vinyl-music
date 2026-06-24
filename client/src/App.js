@@ -211,7 +211,7 @@ export default function App() {
       const res = await fetch(`${API}/api/recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlists, targetPlaylist: selected }),
+        body: JSON.stringify({ playlists, targetPlaylist: selected, previousRecs: history.map(h => ({ title: h.title, artist: h.artist })) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');

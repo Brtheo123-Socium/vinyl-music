@@ -182,21 +182,36 @@ app.post('/api/recommend', async (req, res) => {
     .map(pl => `${pl.name}: ${pl.tracks.slice(0, 6).map(t => `${t.title} - ${t.artist}`).join(', ')}`)
     .join('\n');
 
-  const prompt = `Recommend ONE new song for this playlist. JSON only, no markdown.
+  const previousRecs = req.body.previousRecs || [];
+  const previousStr = previousRecs.length > 0
+    ? previousRecs.map(r => `${r.title} by ${r.artist}`).join(', ')
+    : 'none';
+
+  const seeds = [
+    'Dig deep into the crates - find something obscure but perfect.',
+    'Think of an underrated deep cut, not a well-known hit.',
+    'Find something surprising that still fits perfectly.',
+    'Go beyond the obvious - what would a true music nerd pick?',
+    'Pick something from a lesser-known artist that fits the vibe.',
+  ];
+  const seed = seeds[Math.floor(Math.random() * seeds.length)];
+
+  const prompt = `You are a music expert. Recommend ONE specific real song for this playlist. ${seed}
 
 PLAYLIST: "${targetPlaylist.name}"
-SONGS IN IT: ${targetSongs || '(none)'}
-OTHER PLAYLISTS FOR TASTE:
-${otherContext || '(none)'}
+SONGS IN PLAYLIST: ${targetSongs || '(none)'}
+TASTE CONTEXT: ${otherContext || '(none)'}
+ALREADY SUGGESTED - DO NOT REPEAT: ${previousStr}
 
-Do not recommend anything already listed. Match the vibe closely.
+Rules: Pick a real specific song. Avoid mainstream obvious hits. Match the playlist vibe exactly.
 
-{"title":"","artist":"","album":"","year":2020,"why":"1 sentence","vibe":"3 words","genres":[]}`;
+Respond ONLY with this JSON:
+{"title":"Song Title","artist":"Artist Name","album":"Album Name","year":2019,"why":"1 sentence","vibe":"3 words","genres":["genre"]}`;
 
   try {
     const msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [{ role: 'user', content: prompt }],
     });
     const raw = msg.content[0].text.trim();
